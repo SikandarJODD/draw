@@ -11,10 +11,10 @@ Build and test one phase before starting the next.
 
 ## Phase 2: Add zoom and pan
 
-- [ ] 2.1 Zoom at the mouse or trackpad position.
-- [ ] 2.2 Pan with the trackpad or Space + drag.
-- [ ] 2.3 Add zoom in, zoom out, reset, and fit buttons.
-- [ ] 2.4 Set safe minimum and maximum zoom levels.
+- [x] 2.1 Zoom at the mouse or trackpad position.
+- [x] 2.2 Pan with the trackpad or Space + drag.
+- [x] 2.3 Add zoom in, zoom out, reset, and fit buttons.
+- [x] 2.4 Set safe minimum and maximum zoom levels.
 
 ## Phase 3: Add background colors
 
