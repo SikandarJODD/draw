@@ -2,12 +2,6 @@
 	import { Draw } from 'sv-drawesome';
 </script>
 
-<div class="canvas">
+<div class="canvas h-screen w-full">
 	<Draw />
 </div>
-
-<style>
-	.canvas {
-		height: min(42rem, 80vh);
-	}
-</style>
