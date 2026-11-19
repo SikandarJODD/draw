@@ -196,7 +196,7 @@
 		<ButtonGroup.Root aria-label="Zoom controls" class="rounded-lg border bg-background">
 			<Button
 				variant="ghost"
-				size="icon-lg"
+				size="icon-xl"
 				aria-label="Zoom out"
 				title="Zoom out"
 				disabled={scale <= MIN_ZOOM}
@@ -206,7 +206,7 @@
 			</Button>
 			<Button
 				variant="ghost"
-				size="lg"
+				size="xl"
 				class="min-w-14 px-2 font-mono"
 				aria-label="Reset zoom"
 				title="Reset zoom"
@@ -216,7 +216,7 @@
 			</Button>
 			<Button
 				variant="ghost"
-				size="icon-lg"
+				size="icon-xl"
 				aria-label="Zoom in"
 				title="Zoom in"
 				disabled={scale >= MAX_ZOOM}
@@ -226,7 +226,7 @@
 			</Button>
 			<Button
 				variant="ghost"
-				size="lg"
+				size="xl"
 				aria-label="Fit artboard"
 				title="Fit artboard"
 				onclick={fitArtboard}

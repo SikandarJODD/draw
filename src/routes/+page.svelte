@@ -56,7 +56,6 @@
 		bind:this={drawing}
 		board={ARTBOARD}
 		class="drawing-canvas"
-		inset="1rem"
 		theme={mode.current}
 		look="studio"
 		settings="bar"
