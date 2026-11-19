@@ -1,2 +1,13 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+	import { Draw } from 'sv-drawesome';
+</script>
+
+<div class="canvas">
+	<Draw />
+</div>
+
+<style>
+	.canvas {
+		height: min(42rem, 80vh);
+	}
+</style>
