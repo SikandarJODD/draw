@@ -14,14 +14,14 @@
 	const MIN_ZOOM = 0.25;
 	const MAX_ZOOM = 4;
 	const ZOOM_STEP = 1.2;
-	const ARTBOARD_WIDTH = 1200;
-	const ARTBOARD_HEIGHT = 750;
-
 	let { children }: Props = $props();
 	let workspace: HTMLElement;
+	let zoomControls: HTMLElement;
 	let scale = $state(1);
 	let offsetX = $state(0);
 	let offsetY = $state(0);
+	let zoomLeft = $state(12);
+	let zoomTop = $state(12);
 	let spacePressed = $state(false);
 	let panPointer = $state<number | null>(null);
 	let lastPointer = { x: 0, y: 0 };
@@ -53,19 +53,11 @@
 	}
 
 	function fitArtboard(): void {
-		const sidePadding = workspace.clientWidth <= 640 ? 24 : 48;
-		const horizontalRoom = Math.max(1, workspace.clientWidth - sidePadding);
-		const verticalRoom = Math.max(1, workspace.clientHeight - 192);
-
-		scale = clampZoom(Math.min(horizontalRoom / ARTBOARD_WIDTH, verticalRoom / ARTBOARD_HEIGHT));
-		offsetX = 0;
-		offsetY = 0;
+		resetZoom();
 	}
 
 	function handleWheel(event: WheelEvent): void {
-		if (event.target instanceof Element && event.target.closest('button, input, [role="slider"]')) {
-			return;
-		}
+		if (!(event.target instanceof Element) || !event.target.closest('.artboard-viewport')) return;
 
 		event.preventDefault();
 
@@ -79,7 +71,14 @@
 	}
 
 	function handlePointerDown(event: PointerEvent): void {
-		if (!spacePressed || event.button !== 0) return;
+		if (
+			!spacePressed ||
+			event.button !== 0 ||
+			!(event.target instanceof Element) ||
+			!event.target.closest('.artboard-viewport')
+		) {
+			return;
+		}
 
 		event.preventDefault();
 		panPointer = event.pointerId;
@@ -120,9 +119,45 @@
 
 	const workspaceAttachment: Attachment<HTMLElement> = (node) => {
 		workspace = node;
-		const observer = new ResizeObserver(fitArtboard);
-		observer.observe(node);
-		return () => observer.disconnect();
+		let toolbarObserver: ResizeObserver | undefined;
+		let drawingToolbar: HTMLElement | null = null;
+		let positionZoomControls: (() => void) | undefined;
+		let animationFrame = requestAnimationFrame(() => {
+			const toolbar = node.querySelector<HTMLElement>('[aria-label="Drawing tools"]');
+			if (!toolbar) return;
+			drawingToolbar = toolbar;
+
+			const updatePosition = () => {
+				const bounds = toolbar.getBoundingClientRect();
+				zoomLeft = Math.max(12, bounds.left - zoomControls.offsetWidth - 8);
+				zoomTop = bounds.top;
+			};
+			positionZoomControls = updatePosition;
+
+			toolbarObserver = new ResizeObserver(updatePosition);
+			toolbarObserver.observe(toolbar);
+			toolbarObserver.observe(zoomControls);
+			window.addEventListener('resize', updatePosition);
+			toolbar.addEventListener('animationend', updatePosition);
+			updatePosition();
+
+			animationFrame = requestAnimationFrame(() => {
+				updatePosition();
+			});
+		});
+
+		return () => {
+			cancelAnimationFrame(animationFrame);
+			toolbarObserver?.disconnect();
+			if (positionZoomControls) {
+				window.removeEventListener('resize', positionZoomControls);
+				drawingToolbar?.removeEventListener('animationend', positionZoomControls);
+			}
+		};
+	};
+
+	const zoomControlsAttachment: Attachment<HTMLElement> = (node) => {
+		zoomControls = node;
 	};
 </script>
 
@@ -142,22 +177,26 @@
 	onpointercancel={endPan}
 >
 	<div
-		class="artboard-host"
+		class="artboard-viewport"
 		style:--camera-x={`${offsetX}px`}
 		style:--camera-y={`${offsetY}px`}
 		style:--camera-scale={scale}
 	>
-		<div class="artboard-frame"></div>
 		<div class="drawing-layer">
 			{@render children()}
 		</div>
 	</div>
 
-	<div class="absolute bottom-3 left-3 z-40 sm:bottom-4 sm:left-4">
-		<ButtonGroup.Root aria-label="Zoom controls" class="rounded-md border bg-background">
+	<div
+		{@attach zoomControlsAttachment}
+		class="zoom-controls"
+		style:left={`${zoomLeft}px`}
+		style:top={`${zoomTop}px`}
+	>
+		<ButtonGroup.Root aria-label="Zoom controls" class="rounded-lg border bg-background">
 			<Button
 				variant="ghost"
-				size="icon"
+				size="icon-lg"
 				aria-label="Zoom out"
 				title="Zoom out"
 				disabled={scale <= MIN_ZOOM}
@@ -167,6 +206,7 @@
 			</Button>
 			<Button
 				variant="ghost"
+				size="lg"
 				class="min-w-14 px-2 font-mono"
 				aria-label="Reset zoom"
 				title="Reset zoom"
@@ -176,7 +216,7 @@
 			</Button>
 			<Button
 				variant="ghost"
-				size="icon"
+				size="icon-lg"
 				aria-label="Zoom in"
 				title="Zoom in"
 				disabled={scale >= MAX_ZOOM}
@@ -184,7 +224,13 @@
 			>
 				<PlusIcon />
 			</Button>
-			<Button variant="ghost" aria-label="Fit artboard" title="Fit artboard" onclick={fitArtboard}>
+			<Button
+				variant="ghost"
+				size="lg"
+				aria-label="Fit artboard"
+				title="Fit artboard"
+				onclick={fitArtboard}
+			>
 				<ScanIcon />
 				Fit
 			</Button>
@@ -203,35 +249,31 @@
 		overscroll-behavior: none;
 	}
 
-	.artboard-host {
+	.artboard-viewport {
 		position: relative;
-		width: 75rem;
-		height: 46.875rem;
+		width: min(88vw, 115.2vh, 75rem);
+		aspect-ratio: 8 / 5;
+		overflow: hidden;
+		border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
+		border-radius: 0.5rem;
+		background: #ffffff;
+		box-shadow:
+			0 1px 2px oklch(0 0 0 / 5%),
+			0 8px 24px oklch(0 0 0 / 8%);
 	}
 
-	.artboard-frame,
 	.drawing-layer :global(.drawing-canvas > svg) {
 		transform: translate(var(--camera-x), var(--camera-y)) scale(var(--camera-scale));
 		transform-origin: center;
 		will-change: transform;
 	}
 
-	.artboard-frame,
 	.drawing-layer {
 		position: absolute;
 		inset: 0;
 		width: 100%;
 		height: 100%;
-	}
-
-	.artboard-frame {
-		border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
-		border-radius: 1rem;
-		background: #ffffff;
-		box-shadow:
-			0 1px 2px oklch(0 0 0 / 5%),
-			0 8px 24px oklch(0 0 0 / 8%);
-		pointer-events: none;
+		border-radius: inherit;
 	}
 
 	.drawing-layer :global(.drawing-canvas) {
@@ -242,6 +284,11 @@
 	.drawing-layer :global([aria-label='Drawing tools']) {
 		position: fixed;
 		bottom: 1rem;
+	}
+
+	.zoom-controls {
+		position: fixed;
+		z-index: 40;
 	}
 
 	.space-panning {
@@ -255,5 +302,11 @@
 	.actively-panning {
 		cursor: grabbing;
 		user-select: none;
+	}
+
+	@media (max-width: 40rem) {
+		.artboard-viewport {
+			width: min(94vw, 115.2vh);
+		}
 	}
 </style>

@@ -62,5 +62,6 @@
 		settings="bar"
 		gauge
 		depth="soft"
+		draggable
 	/>
 </DrawingArtboard>
