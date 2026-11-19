@@ -23,8 +23,10 @@
 	let zoomLeft = $state(12);
 	let zoomTop = $state(12);
 	let spacePressed = $state(false);
+	let smoothCamera = $state(false);
 	let panPointer = $state<number | null>(null);
 	let lastPointer = { x: 0, y: 0 };
+	let cameraTimer: ReturnType<typeof setTimeout> | undefined;
 
 	let zoomPercent = $derived(Math.round(scale * 100));
 
@@ -52,6 +54,20 @@
 		offsetY = 0;
 	}
 
+	function stopCameraAnimation(): void {
+		clearTimeout(cameraTimer);
+		smoothCamera = false;
+	}
+
+	function animateCamera(update: () => void): void {
+		clearTimeout(cameraTimer);
+		smoothCamera = true;
+		update();
+		cameraTimer = setTimeout(() => {
+			smoothCamera = false;
+		}, 180);
+	}
+
 	function fitArtboard(): void {
 		resetZoom();
 	}
@@ -60,6 +76,7 @@
 		if (!(event.target instanceof Element) || !event.target.closest('.artboard-viewport')) return;
 
 		event.preventDefault();
+		stopCameraAnimation();
 
 		if (event.ctrlKey || event.metaKey) {
 			zoomTo(scale * Math.exp(-event.deltaY * 0.002), event.clientX, event.clientY);
@@ -81,6 +98,7 @@
 		}
 
 		event.preventDefault();
+		stopCameraAnimation();
 		panPointer = event.pointerId;
 		lastPointer = { x: event.clientX, y: event.clientY };
 		workspace.setPointerCapture(event.pointerId);
@@ -147,6 +165,7 @@
 		});
 
 		return () => {
+			clearTimeout(cameraTimer);
 			cancelAnimationFrame(animationFrame);
 			toolbarObserver?.disconnect();
 			if (positionZoomControls) {
@@ -169,7 +188,14 @@
 
 <main
 	{@attach workspaceAttachment}
-	class={['workspace', { 'space-panning': spacePressed, 'actively-panning': panPointer !== null }]}
+	class={[
+		'workspace',
+		{
+			'space-panning': spacePressed,
+			'actively-panning': panPointer !== null,
+			'smooth-camera': smoothCamera
+		}
+	]}
 	onwheel={handleWheel}
 	onpointerdown={handlePointerDown}
 	onpointermove={handlePointerMove}
@@ -200,7 +226,7 @@
 				aria-label="Zoom out"
 				title="Zoom out"
 				disabled={scale <= MIN_ZOOM}
-				onclick={() => zoomTo(scale / ZOOM_STEP)}
+				onclick={() => animateCamera(() => zoomTo(scale / ZOOM_STEP))}
 			>
 				<MinusIcon />
 			</Button>
@@ -210,7 +236,7 @@
 				class="min-w-14 px-2 font-mono"
 				aria-label="Reset zoom"
 				title="Reset zoom"
-				onclick={resetZoom}
+				onclick={() => animateCamera(resetZoom)}
 			>
 				{zoomPercent}%
 			</Button>
@@ -220,7 +246,7 @@
 				aria-label="Zoom in"
 				title="Zoom in"
 				disabled={scale >= MAX_ZOOM}
-				onclick={() => zoomTo(scale * ZOOM_STEP)}
+				onclick={() => animateCamera(() => zoomTo(scale * ZOOM_STEP))}
 			>
 				<PlusIcon />
 			</Button>
@@ -229,7 +255,7 @@
 				size="xl"
 				aria-label="Fit artboard"
 				title="Fit artboard"
-				onclick={fitArtboard}
+				onclick={() => animateCamera(fitArtboard)}
 			>
 				<ScanIcon />
 				Fit
@@ -266,6 +292,10 @@
 		transform: translate(var(--camera-x), var(--camera-y)) scale(var(--camera-scale));
 		transform-origin: center;
 		will-change: transform;
+	}
+
+	.smooth-camera .drawing-layer :global(.drawing-canvas > svg) {
+		transition: transform 180ms cubic-bezier(0.65, 0, 0.35, 1);
 	}
 
 	.drawing-layer {
@@ -307,6 +337,12 @@
 	@media (max-width: 40rem) {
 		.artboard-viewport {
 			width: min(94vw, 115.2vh);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.smooth-camera .drawing-layer :global(.drawing-canvas > svg) {
+			transition: none;
 		}
 	}
 </style>

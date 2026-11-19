@@ -18,7 +18,7 @@
 	}
 </script>
 
-<div class="fixed top-4 left-4 z-20">
+<!-- <div class="fixed top-4 left-4 z-20">
 	<ColorPicker.Root bind:value={color} name="drawing-color">
 		<div
 			class="flex items-center gap-2 rounded-lg border bg-background/90 p-1.5 shadow-sm backdrop-blur"
@@ -44,7 +44,7 @@
 			</div>
 		</ColorPicker.Content>
 	</ColorPicker.Root>
-</div>
+</div> -->
 
 <div class="fixed top-4 right-4 z-10 flex gap-2">
 	<Button onclick={downloadSvg}>Download SVG</Button>
